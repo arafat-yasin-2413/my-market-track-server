@@ -27,7 +27,22 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
 
-        
+        const db = client.db('marketTrackDB');
+        const productCollection = db.collection('products');
+
+
+        app.get('/products', async(req, res)=>{
+            const products = await productCollection.find().toArray();
+            res.send(products);
+        });
+
+        app.post('/products', async(req,res)=>{
+            const newProduct = req.body;
+            const result = await productCollection.insertOne(newProduct);
+            res.send(result);
+        })
+
+
 
 
 
