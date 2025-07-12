@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -29,9 +29,30 @@ async function run() {
         const db = client.db("marketTrackDB");
         const productCollection = db.collection("products");
 
+        /////////////////// PRODUCT related APIs //////////////////////////
         app.get("/allProduct", async (req, res) => {
             const products = await productCollection.find().toArray();
             res.send(products);
+        });
+
+        // my product
+        app.get("/products", async (req, res) => {
+            try {
+                const vendorEmail = req.query.email;
+
+                const query = { email: vendorEmail };
+                const options = {
+                    sort: { date: -1 },
+                };
+
+                const myProducts = await productCollection
+                    .find(query, options)
+                    .toArray();
+                res.send(myProducts);
+            } catch (error) {
+                console.error("Error fetching products : ", error);
+                res.status(500).send({ message: "Failed to get products" });
+            }
         });
 
         app.post("/addProduct", async (req, res) => {
@@ -42,6 +63,21 @@ async function run() {
             } catch (error) {
                 console.log("Failed to save product to db : ", error);
                 res.status(500).send({ message: "Internal server error" });
+            }
+        });
+
+        app.delete("/products/:id", async (req, res) => {
+            try {
+                const id = req.params.id;
+                const result = await productCollection.deleteOne({
+                    _id: new ObjectId(id),
+                });
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({
+                    success: false,
+                    message: "Server error",
+                });
             }
         });
 
