@@ -97,9 +97,10 @@ async function run() {
 
 
         ////////////////////// PAYMENT related APIs ////////////////////////
+        // get payment history for specific user and all payment history for admin
         app.get('/payments', async(req, res)=>{
             try{
-                const userEmail = req.body.email;
+                const userEmail = req.query.email;
 
                 const query = userEmail ? { email : userEmail} : {};
                 const options = { sort: {paidAt: -1 }};
