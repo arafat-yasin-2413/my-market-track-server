@@ -35,6 +35,17 @@ async function run() {
             res.send(products);
         });
 
+
+        // specific product
+        app.get('/products/:id', async(req, res)=>{
+            const id = req.params.id;
+            // console.log('req.params = ', req.params.id);
+            
+            const filter = {_id: new ObjectId(id)}
+            const product = await productCollection.findOne(filter);
+            res.send(product);
+        })
+
         // my product
         app.get("/products", async (req, res) => {
             try {
