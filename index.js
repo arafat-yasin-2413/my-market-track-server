@@ -29,6 +29,7 @@ async function run() {
 
         const db = client.db("marketTrackDB");
         const productCollection = db.collection("products");
+        const paymentsCollection = db.collection("payments");
 
         /////////////////// PRODUCT related APIs //////////////////////////
         app.get("/allProduct", async (req, res) => {
@@ -96,6 +97,25 @@ async function run() {
 
 
         ////////////////////// PAYMENT related APIs ////////////////////////
+        app.get('/payments', async(req, res)=>{
+            try{
+                const userEmail = req.body.email;
+
+                const query = userEmail ? { email : userEmail} : {};
+                const options = { sort: {paidAt: -1 }};
+
+                const payments = await paymentsCollection.find(query,options).toArray();
+                res.send(payments);
+            }
+            catch (error){
+                console.error('Error fetching payment history: ', error);
+                res.status(500).send({ message: 'Failed to get payments.'});
+            }
+        })
+        
+        
+        
+        
         app.post('/create-payment-intent', async(req, res)=>{
             const amountInCents = req.body.amountInCents;
             try{
@@ -109,6 +129,32 @@ async function run() {
             catch (error){
                 res.status(500).json({error: error.message});
             }
+        });
+
+
+        app.post('/payments', async(req, res)=>{
+            try{
+                const {productId, email, amount, paymentMethod, transactionId} = req.body;
+            
+                const paymentDoc = {
+                    productId, 
+                    email,
+                    amount,
+                    paymentMethod,
+                    transactionId,
+                    paidAt: new Date().toISOString(),
+                }
+                const paymentResult = await paymentsCollection.insertOne(paymentDoc); 
+                res.status(201).send({
+                    message: 'Payment recodrded to db successfully!',
+                    insertedId: paymentResult.insertedId
+                });
+            }
+            catch (error){
+                console.error('Payment processing failed : ', error)
+            }
+
+
         })
 
 
