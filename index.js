@@ -30,6 +30,8 @@ async function run() {
         const db = client.db("marketTrackDB");
         const productCollection = db.collection("products");
         const paymentsCollection = db.collection("payments");
+        const usersCollection = db.collection("users");
+
 
         /////////////////// PRODUCT related APIs //////////////////////////
         app.get("/allProduct", async (req, res) => {
@@ -156,7 +158,28 @@ async function run() {
             }
 
 
+        });
+
+
+
+        ////////////////////// USER related APIs //////////////////////
+        app.post('/users', async(req, res)=>{
+            const email = req.body.email;
+            const userExist = await usersCollection.findOne({ email })
+            
+            if(userExist) {
+                return res.status(200).send({message: 'User already exists.', inserted: false });
+
+            }
+            else{
+                const user = req.body;
+                const result = await usersCollection.insertOne(user);
+                res.send(result);
+            }
+        
         })
+
+    
 
 
 
