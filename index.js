@@ -1,8 +1,10 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-const stripe = require('stripe')(process.env.PAYMENT_GATEWAY_KEY)
+const stripe = require("stripe")(process.env.PAYMENT_GATEWAY_KEY);
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -22,6 +24,23 @@ const client = new MongoClient(uri, {
     },
 });
 
+
+const verifyJWT = (req, res, next) =>{
+    const token = req?.headers?.authorization?.split(' ')[1];
+    if(!token) return res.status(401).send({message: 'Unauthorized Access! caught.'})
+    jwt.verify(token, process.env.JWT_SECRET_KEY, (error, decoded)=>{
+        if(error){
+            console.log(error);
+            return res.status(401).send({message: 'Unauthorized Access!!!'});
+        }
+        req.tokenEmail = decoded.email;
+        next();
+    })
+
+}
+
+
+
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
@@ -32,6 +51,14 @@ async function run() {
         const paymentsCollection = db.collection("payments");
         const usersCollection = db.collection("users");
 
+        app.post("/jwt", (req, res) => {
+            const user = { email: req.body.email };
+
+            const token = jwt.sign(user, process.env.JWT_SECRET_KEY, {
+                expiresIn: "14d",
+            });
+            res.send({ token, message: "JWT created Successfully!" });
+        });
 
         /////////////////// PRODUCT related APIs //////////////////////////
         app.get("/allProduct", async (req, res) => {
@@ -39,21 +66,29 @@ async function run() {
             res.send(products);
         });
 
-
         // specific product
-        app.get('/products/:id', async(req, res)=>{
+        app.get("/products/:id", async (req, res) => {
             const id = req.params.id;
             // console.log('req.params = ', req.params.id);
-            
-            const filter = {_id: new ObjectId(id)}
+
+            const filter = { _id: new ObjectId(id) };
             const product = await productCollection.findOne(filter);
             res.send(product);
-        })
+        });
 
-        // my product
-        app.get("/products", async (req, res) => {
+        // my products
+        app.get("/products", verifyJWT , async (req, res) => {
             try {
-                const vendorEmail = req.query.email;
+                const decodedEmail = req.tokenEmail;
+                const vendorEmail = req?.query?.email;
+
+                // console.log('decoded email ----> ', decodedEmail);
+                // console.log('query email -------> ', vendorEmail);
+              
+
+                if(decodedEmail !== vendorEmail) {
+                    return res.status(403).send({message: 'Forbidden Access!'});
+                }
 
                 const query = { email: vendorEmail };
                 const options = {
@@ -96,106 +131,84 @@ async function run() {
             }
         });
 
-
-
         ////////////////////// PAYMENT related APIs ////////////////////////
         // get payment history for specific user and all payment history for admin
-        app.get('/payments', async(req, res)=>{
-            try{
+        app.get("/payments", async (req, res) => {
+            try {
                 const userEmail = req.query.email;
 
-                const query = userEmail ? { email : userEmail} : {};
-                const options = { sort: {paidAt: -1 }};
+                const query = userEmail ? { email: userEmail } : {};
+                const options = { sort: { paidAt: -1 } };
 
-                const payments = await paymentsCollection.find(query,options).toArray();
+                const payments = await paymentsCollection
+                    .find(query, options)
+                    .toArray();
                 res.send(payments);
-            }
-            catch (error){
-                console.error('Error fetching payment history: ', error);
-                res.status(500).send({ message: 'Failed to get payments.'});
-            }
-        })
-        
-        
-        
-        
-        app.post('/create-payment-intent', async(req, res)=>{
-            const amountInCents = req.body.amountInCents;
-            try{
-                const paymentIntent = await stripe.paymentIntents.create({
-                    amount: amountInCents,
-                    currency: 'usd',
-                    payment_method_types: ['card'],
-                });
-                res.json({ clientSecret: paymentIntent.client_secret })
-            }
-            catch (error){
-                res.status(500).json({error: error.message});
+            } catch (error) {
+                console.error("Error fetching payment history: ", error);
+                res.status(500).send({ message: "Failed to get payments." });
             }
         });
 
+        app.post("/create-payment-intent", async (req, res) => {
+            const amountInCents = req.body.amountInCents;
+            try {
+                const paymentIntent = await stripe.paymentIntents.create({
+                    amount: amountInCents,
+                    currency: "usd",
+                    payment_method_types: ["card"],
+                });
+                res.json({ clientSecret: paymentIntent.client_secret });
+            } catch (error) {
+                res.status(500).json({ error: error.message });
+            }
+        });
 
-        app.post('/payments', async(req, res)=>{
-            try{
-                const {productId, email, amount, paymentMethod, transactionId} = req.body;
-            
+        app.post("/payments", async (req, res) => {
+            try {
+                const {
+                    productId,
+                    email,
+                    amount,
+                    paymentMethod,
+                    transactionId,
+                } = req.body;
+
                 const paymentDoc = {
-                    productId, 
+                    productId,
                     email,
                     amount,
                     paymentMethod,
                     transactionId,
                     paidAt: new Date().toISOString(),
-                }
-                const paymentResult = await paymentsCollection.insertOne(paymentDoc); 
+                };
+                const paymentResult = await paymentsCollection.insertOne(
+                    paymentDoc
+                );
                 res.status(201).send({
-                    message: 'Payment recodrded to db successfully!',
-                    insertedId: paymentResult.insertedId
+                    message: "Payment recodrded to db successfully!",
+                    insertedId: paymentResult.insertedId,
                 });
+            } catch (error) {
+                console.error("Payment processing failed : ", error);
             }
-            catch (error){
-                console.error('Payment processing failed : ', error)
-            }
-
-
         });
 
-
-
         ////////////////////// USER related APIs //////////////////////
-        app.post('/users', async(req, res)=>{
+        app.post("/users", async (req, res) => {
             const email = req.body.email;
-            const userExist = await usersCollection.findOne({ email })
-            
-            if(userExist) {
-                return res.status(200).send({message: 'User already exists.', inserted: false });
+            const userExist = await usersCollection.findOne({ email });
 
-            }
-            else{
+            if (userExist) {
+                return res
+                    .status(200)
+                    .send({ message: "User already exists.", inserted: false });
+            } else {
                 const user = req.body;
                 const result = await usersCollection.insertOne(user);
                 res.send(result);
             }
-        
-        })
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        });
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
