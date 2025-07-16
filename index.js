@@ -26,9 +26,12 @@ const client = new MongoClient(uri, {
 
 
 const verifyJWT = (req, res, next) =>{
+    // console.log('headers in the middleware: ', req.headers);
     const token = req?.headers?.authorization?.split(' ')[1];
+
     if(!token) return res.status(401).send({message: 'Unauthorized Access! caught.'})
-    jwt.verify(token, process.env.JWT_SECRET_KEY, (error, decoded)=>{
+    
+        jwt.verify(token, process.env.JWT_SECRET_KEY, (error, decoded)=>{
         if(error){
             console.log(error);
             return res.status(401).send({message: 'Unauthorized Access!!!'});
@@ -133,9 +136,18 @@ async function run() {
 
         ////////////////////// PAYMENT related APIs ////////////////////////
         // get payment history for specific user and all payment history for admin
-        app.get("/payments", async (req, res) => {
+        app.get("/payments",verifyJWT, async (req, res) => {
             try {
                 const userEmail = req.query.email;
+                const decodedEmail = req.tokenEmail;
+
+
+                // console.log('user email ------> ', userEmail);
+                // console.log('decoded email ----> ', decodedEmail);
+
+                if(decodedEmail !== userEmail) {
+                    return res.status(403).send({message: 'Forbidden Access!'});
+                }
 
                 const query = userEmail ? { email: userEmail } : {};
                 const options = { sort: { paidAt: -1 } };
@@ -195,6 +207,13 @@ async function run() {
         });
 
         ////////////////////// USER related APIs //////////////////////
+
+        app.get('/users', async(req,res)=>{
+            const allUser = await usersCollection.find().toArray();
+            res.send(allUser);
+        })
+
+
         app.post("/users", async (req, res) => {
             const email = req.body.email;
             const userExist = await usersCollection.findOne({ email });
