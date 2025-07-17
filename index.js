@@ -24,25 +24,24 @@ const client = new MongoClient(uri, {
     },
 });
 
-
-const verifyJWT = (req, res, next) =>{
+const verifyJWT = (req, res, next) => {
     // console.log('headers in the middleware: ', req.headers);
-    const token = req?.headers?.authorization?.split(' ')[1];
+    const token = req?.headers?.authorization?.split(" ")[1];
 
-    if(!token) return res.status(401).send({message: 'Unauthorized Access! caught.'})
-    
-        jwt.verify(token, process.env.JWT_SECRET_KEY, (error, decoded)=>{
-        if(error){
+    if (!token)
+        return res
+            .status(401)
+            .send({ message: "Unauthorized Access! caught." });
+
+    jwt.verify(token, process.env.JWT_SECRET_KEY, (error, decoded) => {
+        if (error) {
             console.log(error);
-            return res.status(401).send({message: 'Unauthorized Access!!!'});
+            return res.status(401).send({ message: "Unauthorized Access!!!" });
         }
         req.tokenEmail = decoded.email;
         next();
-    })
-
-}
-
-
+    });
+};
 
 async function run() {
     try {
@@ -80,17 +79,18 @@ async function run() {
         });
 
         // my products
-        app.get("/products", verifyJWT , async (req, res) => {
+        app.get("/products", verifyJWT, async (req, res) => {
             try {
                 const decodedEmail = req.tokenEmail;
                 const vendorEmail = req?.query?.email;
 
                 // console.log('decoded email ----> ', decodedEmail);
                 // console.log('query email -------> ', vendorEmail);
-              
 
-                if(decodedEmail !== vendorEmail) {
-                    return res.status(403).send({message: 'Forbidden Access!'});
+                if (decodedEmail !== vendorEmail) {
+                    return res
+                        .status(403)
+                        .send({ message: "Forbidden Access!" });
                 }
 
                 const query = { email: vendorEmail };
@@ -136,17 +136,18 @@ async function run() {
 
         ////////////////////// PAYMENT related APIs ////////////////////////
         // get payment history for specific user and all payment history for admin
-        app.get("/payments",verifyJWT, async (req, res) => {
+        app.get("/payments", verifyJWT, async (req, res) => {
             try {
                 const userEmail = req.query.email;
                 const decodedEmail = req.tokenEmail;
 
-
                 // console.log('user email ------> ', userEmail);
                 // console.log('decoded email ----> ', decodedEmail);
 
-                if(decodedEmail !== userEmail) {
-                    return res.status(403).send({message: 'Forbidden Access!'});
+                if (decodedEmail !== userEmail) {
+                    return res
+                        .status(403)
+                        .send({ message: "Forbidden Access!" });
                 }
 
                 const query = userEmail ? { email: userEmail } : {};
@@ -208,11 +209,10 @@ async function run() {
 
         ////////////////////// USER related APIs //////////////////////
 
-        app.get('/users', async(req,res)=>{
+        app.get("/users", async (req, res) => {
             const allUser = await usersCollection.find().toArray();
             res.send(allUser);
-        })
-
+        });
 
         app.post("/users", async (req, res) => {
             const email = req.body.email;
@@ -226,6 +226,32 @@ async function run() {
                 const user = req.body;
                 const result = await usersCollection.insertOne(user);
                 res.send(result);
+            }
+        });
+
+        app.patch("/users/role/:id", async (req, res) => {
+            const userId = req.params.id;
+            const { newRole } = req.body;
+
+            try {
+                const result = await usersCollection.updateOne(
+                    { _id: new ObjectId(userId) },
+                    { $set: { role: newRole } }
+                );
+                if (result.modifiedCount > 0) {
+                    res.send({
+                        success: true,
+                        modifiedCount: result.modifiedCount,
+                    });
+                } else {
+                    res.send({ success: false, message: "No changes made" });
+                }
+            } catch (error) {
+                console.error("Update error:", error);
+                res.status(500).send({
+                    success: false,
+                    message: "Failed to update role",
+                });
             }
         });
 
