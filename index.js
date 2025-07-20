@@ -209,7 +209,7 @@ async function run() {
 
         ////////////////////// USER related APIs //////////////////////
 
-        app.get("/users", async (req, res) => {
+        app.get("/users", verifyJWT, async (req, res) => {
             const allUser = await usersCollection.find().toArray();
             res.send(allUser);
         });
