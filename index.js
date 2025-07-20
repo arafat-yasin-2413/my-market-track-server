@@ -53,6 +53,25 @@ async function run() {
         const paymentsCollection = db.collection("payments");
         const usersCollection = db.collection("users");
 
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.tokenEmail;
+            if (!email) {
+                return res
+                    .status(403)
+                    .send({ message: "Forbidden access - no email found" });
+            }
+
+            const user = await usersCollection.findOne({ email });
+
+            if (!user || user.role !== "admin") {
+                return res
+                    .status(403)
+                    .send({ message: "Forbidden access - not admin" });
+            }
+
+            next();
+        };
+
         app.post("/jwt", (req, res) => {
             const user = { email: req.body.email };
 
@@ -209,28 +228,32 @@ async function run() {
 
         ////////////////////// USER related APIs //////////////////////
 
-        app.get("/users", verifyJWT, async (req, res) => {
+        app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
             const allUser = await usersCollection.find().toArray();
             res.send(allUser);
         });
 
         // getting user role by email
-        app.get("/user/role/:email", async(req, res)=>{
-            try{
+        app.get("/user/role/:email", async (req, res) => {
+            try {
                 const email = req.params.email;
                 const user = await usersCollection.findOne({ email });
 
-                if(!user){
-                    return res.status(404).send({ role: null, message: 'User not found'})
+                if (!user) {
+                    return res
+                        .status(404)
+                        .send({ role: null, message: "User not found" });
                 }
 
                 res.send({ role: user.role });
-            }
-            catch (error){
+            } catch (error) {
                 console.log("Error fetching role: ", error);
-                res.status(500).send({ role: null, error: "Internal Server Error"});
+                res.status(500).send({
+                    role: null,
+                    error: "Internal Server Error",
+                });
             }
-        })
+        });
 
         app.post("/users", async (req, res) => {
             const email = req.body.email;
@@ -247,31 +270,39 @@ async function run() {
             }
         });
 
-        app.patch("/users/role/:id", async (req, res) => {
-            const userId = req.params.id;
-            const { newRole } = req.body;
+        app.patch(
+            "/users/role/:id",
+            verifyJWT,
+            verifyAdmin,
+            async (req, res) => {
+                const userId = req.params.id;
+                const { newRole } = req.body;
 
-            try {
-                const result = await usersCollection.updateOne(
-                    { _id: new ObjectId(userId) },
-                    { $set: { role: newRole } }
-                );
-                if (result.modifiedCount > 0) {
-                    res.send({
-                        success: true,
-                        modifiedCount: result.modifiedCount,
+                try {
+                    const result = await usersCollection.updateOne(
+                        { _id: new ObjectId(userId) },
+                        { $set: { role: newRole } }
+                    );
+                    if (result.modifiedCount > 0) {
+                        res.send({
+                            success: true,
+                            modifiedCount: result.modifiedCount,
+                        });
+                    } else {
+                        res.send({
+                            success: false,
+                            message: "No changes made",
+                        });
+                    }
+                } catch (error) {
+                    console.error("Update error:", error);
+                    res.status(500).send({
+                        success: false,
+                        message: "Failed to update role",
                     });
-                } else {
-                    res.send({ success: false, message: "No changes made" });
                 }
-            } catch (error) {
-                console.error("Update error:", error);
-                res.status(500).send({
-                    success: false,
-                    message: "Failed to update role",
-                });
             }
-        });
+        );
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
