@@ -138,6 +138,20 @@ async function run() {
             }
         });
 
+        app.put("/updateProduct/:id", async(req, res)=>{
+            const id = req.params.id;
+            const updatedData = req.body;
+
+            const result = await productCollection.updateOne(
+                { _id: new ObjectId(id) }, 
+                {
+                    $set: updatedData,
+                }
+            );
+
+            res.send(result);
+        })
+
         app.delete("/products/:id", async (req, res) => {
             try {
                 const id = req.params.id;
