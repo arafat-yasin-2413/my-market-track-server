@@ -138,19 +138,41 @@ async function run() {
             }
         });
 
-        app.put("/updateProduct/:id", async(req, res)=>{
+        app.put("/updateProduct/:id", async (req, res) => {
             const id = req.params.id;
             const updatedData = req.body;
 
+            const product = await productCollection.findOne({
+                _id: new ObjectId(id),
+            });
+            if (!product) {
+                return res.status(404).send({ message: "Product not found" });
+            }
+
+            const newPrices = product.prices || [];
+            newPrices.push({
+                date: updatedData.date,
+                price: updatedData.price,
+            });
+
+            newPrices.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const latestPrice = newPrices[newPrices.length - 1].price;
+
+            const updatedProduct = {
+                ...updatedData,
+                price: latestPrice,
+                prices: newPrices,
+            };
+
             const result = await productCollection.updateOne(
-                { _id: new ObjectId(id) }, 
+                { _id: new ObjectId(id) },
                 {
-                    $set: updatedData,
+                    $set: updatedProduct,
                 }
             );
 
             res.send(result);
-        })
+        });
 
         app.delete("/products/:id", async (req, res) => {
             try {
@@ -214,6 +236,7 @@ async function run() {
             try {
                 const {
                     productId,
+                    productName,
                     email,
                     amount,
                     paymentMethod,
@@ -222,6 +245,7 @@ async function run() {
 
                 const paymentDoc = {
                     productId,
+                    productName,
                     email,
                     amount,
                     paymentMethod,
