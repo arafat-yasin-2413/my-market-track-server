@@ -97,6 +97,27 @@ async function run() {
             res.send(product);
         });
 
+        app.get("/products/sort/low" , async (req, res)=>{
+            try{
+                const products = await productCollection.find().sort({ price: 1 }).toArray();
+                res.send(products);
+            }
+            catch(error){
+                res.status(500).send({ message: "Failed to sort low to High"})
+            }
+        });
+
+
+        app.get("/products/sort/high", async (req, res)=>{
+            try{
+                const products = await productCollection.find().sort({ price: -1 }).toArray();
+                res.send(products);
+            }
+            catch(error){
+                res.status(500).send({ message: 'Failed to sort High to Low'});
+            }
+        })
+
         // my products
         app.get("/products", verifyJWT, async (req, res) => {
             try {
