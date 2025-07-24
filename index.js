@@ -120,6 +120,35 @@ async function run() {
                 res.status(500).send({ message: "Failed to sort High to Low" });
             }
         });
+         
+
+        app.get('/products/sort/dateBy', async (req, res)=>{
+            try{
+                const { startDate, endDate } = req.query;
+
+                if(!startDate || !endDate) {
+                    return res.status(400).send({message: "Start date and End date are required"});
+                }
+
+                const allProduct = await productCollection.find().toArray();
+
+                const filteredProducts = allProduct.filter((singleProduct) => {
+                    if(!Array.isArray(singleProduct.prices)) return false;
+
+                    return singleProduct.prices.some(pricesEntry => {
+                        const entryDate = pricesEntry.date;
+                        return entryDate >= startDate && entryDate <= endDate;
+                    });
+                });
+
+                res.send(filteredProducts);
+            }
+
+            catch (error){
+                console.log('Error in products sorting dateby: ', error);
+                res.status(500).send({message: 'Server Error'});
+            }
+        });
 
         // my products
         app.get("/products", verifyJWT, async (req, res) => {
