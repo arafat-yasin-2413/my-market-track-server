@@ -407,6 +407,12 @@ async function run() {
 
 
         /////////////////////// WATCHLIST related APIs ///////////////////////
+        app.get("/watchlist", async (req, res) => {
+            const watchlistItems = await watchlistCollection.find().toArray();
+            res.send(watchlistItems);
+        });
+
+
         app.get("/watchlist/check", async(req, res)=>{
             try{
                 const {email, productId} = req.query;
