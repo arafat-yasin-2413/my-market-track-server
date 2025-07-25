@@ -52,7 +52,7 @@ async function run() {
         const productCollection = db.collection("products");
         const paymentsCollection = db.collection("payments");
         const usersCollection = db.collection("users");
-        const watchlistCollectin = db.collection("watchlist");
+        const watchlistCollection = db.collection("watchlist");
 
         const verifyAdmin = async (req, res, next) => {
             const email = req.tokenEmail;
@@ -404,6 +404,31 @@ async function run() {
                 }
             }
         );
+
+
+        /////////////////////// WATCHLIST related APIs ///////////////////////
+        app.get("/watchlist/check", async(req, res)=>{
+            try{
+                const {email, productId} = req.query;
+                const isExist = await watchlistCollection.findOne({ email, productId});
+                res.send({ exist : !!isExist});
+            }   
+            catch(error){
+                console.log(error);
+                res.status(500).send({message: "Internal Server Error"});
+            }
+        });
+
+        app.post("/watchlist", async (req, res) => {
+            try {
+                const newWatchlistObj = req.body;
+                const result = await watchlistCollection.insertOne(newWatchlistObj);
+                res.send(result);
+            } catch (error) {
+                console.log("Failed to save product to db : ", error);
+                res.status(500).send({ message: "Internal server error" });
+            }
+        });
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
