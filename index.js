@@ -4,6 +4,7 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { use } = require("react");
 const stripe = require("stripe")(process.env.PAYMENT_GATEWAY_KEY);
 
 const app = express();
@@ -412,6 +413,26 @@ async function run() {
             res.send(watchlistItems);
         });
 
+        app.get("/myWatchlist", async(req, res)=>{
+            try{
+                const userEmail = req.query.email;
+
+                if(!userEmail) {
+                    return res.status(400).send({message: "Email is required to query!"});
+                }
+
+                const query = { email: userEmail };
+
+                const result = await watchlistCollection.find(query).toArray();
+
+                res.send(result);
+            }
+
+            catch(error){
+                console.log('Failed to fetch watchlist items: ', error);
+                res.status(500).send({message: 'Internal Server Error'});
+            }
+        })
 
         app.get("/watchlist/check", async(req, res)=>{
             try{
