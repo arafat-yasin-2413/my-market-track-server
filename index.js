@@ -52,6 +52,7 @@ async function run() {
         const productCollection = db.collection("products");
         const paymentsCollection = db.collection("payments");
         const usersCollection = db.collection("users");
+        const watchlistCollectin = db.collection("watchlist");
 
         const verifyAdmin = async (req, res, next) => {
             const email = req.tokenEmail;
@@ -322,6 +323,15 @@ async function run() {
         app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
             const allUser = await usersCollection.find().toArray();
             res.send(allUser);
+        });
+
+        // specific user
+        app.get("/users/:email", async (req, res) => {
+            const email = req.params.email;
+
+            const filter = { email : email };
+            const singleUser = await usersCollection.findOne(filter);
+            res.send(singleUser);
         });
 
         // getting user role by email
