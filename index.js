@@ -4,7 +4,6 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-const { use } = require("react");
 const stripe = require("stripe")(process.env.PAYMENT_GATEWAY_KEY);
 
 const app = express();
@@ -413,6 +412,7 @@ async function run() {
             res.send(watchlistItems);
         });
 
+        // user specific watchlist
         app.get("/myWatchlist", async(req, res)=>{
             try{
                 const userEmail = req.query.email;
@@ -456,6 +456,26 @@ async function run() {
                 res.status(500).send({ message: "Internal server error" });
             }
         });
+
+
+        app.delete("/watchlist/:id", async(req, res)=>{
+            const id = req.params.id;
+
+            try{
+                const result = await watchlistCollection.deleteOne({ _id: new ObjectId(id) });
+
+                if(result.deletedCount > 0) {
+                    // console.log(result);
+                    res.send({ success: true, result: result });
+                }
+                else{
+                    res.status(404).send({message : "Item not found"});
+                }
+            }
+            catch(error){
+                res.status(500).send({message: "Internal Server Error!"});
+            }
+        })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
