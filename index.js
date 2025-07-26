@@ -122,33 +122,34 @@ async function run() {
                 res.status(500).send({ message: "Failed to sort High to Low" });
             }
         });
-         
 
-        app.get('/products/sort/dateBy', async (req, res)=>{
-            try{
+        app.get("/products/sort/dateBy", async (req, res) => {
+            try {
                 const { startDate, endDate } = req.query;
 
-                if(!startDate || !endDate) {
-                    return res.status(400).send({message: "Start date and End date are required"});
+                if (!startDate || !endDate) {
+                    return res
+                        .status(400)
+                        .send({
+                            message: "Start date and End date are required",
+                        });
                 }
 
                 const allProduct = await productCollection.find().toArray();
 
                 const filteredProducts = allProduct.filter((singleProduct) => {
-                    if(!Array.isArray(singleProduct.prices)) return false;
+                    if (!Array.isArray(singleProduct.prices)) return false;
 
-                    return singleProduct.prices.some(pricesEntry => {
+                    return singleProduct.prices.some((pricesEntry) => {
                         const entryDate = pricesEntry.date;
                         return entryDate >= startDate && entryDate <= endDate;
                     });
                 });
 
                 res.send(filteredProducts);
-            }
-
-            catch (error){
-                console.log('Error in products sorting dateby: ', error);
-                res.status(500).send({message: 'Server Error'});
+            } catch (error) {
+                console.log("Error in products sorting dateby: ", error);
+                res.status(500).send({ message: "Server Error" });
             }
         });
 
@@ -197,36 +198,52 @@ async function run() {
             const id = req.params.id;
             const updatedData = req.body;
 
-            const product = await productCollection.findOne({
-                _id: new ObjectId(id),
-            });
-            if (!product) {
-                return res.status(404).send({ message: "Product not found" });
-            }
+            try {
+                const product = await productCollection.findOne({
+                    _id: new ObjectId(id),
+                });
 
-            const newPrices = product.prices || [];
-            newPrices.push({
-                date: updatedData.date,
-                price: updatedData.price,
-            });
-
-            newPrices.sort((a, b) => new Date(a.date) - new Date(b.date));
-            const latestPrice = newPrices[newPrices.length - 1].price;
-
-            const updatedProduct = {
-                ...updatedData,
-                price: latestPrice,
-                prices: newPrices,
-            };
-
-            const result = await productCollection.updateOne(
-                { _id: new ObjectId(id) },
-                {
-                    $set: updatedProduct,
+                if (!product) {
+                    return res
+                        .status(404)
+                        .send({ message: "Product not found" });
                 }
-            );
 
-            res.send(result);
+                const existingPrices = product.prices || [];
+
+                const newEntry = {
+                    date: updatedData.date,
+                    price: parseFloat(updatedData.price),
+                };
+
+                const updatedPrices = existingPrices.filter(
+                    (p) => p.date !== newEntry.date
+                );
+                updatedPrices.push(newEntry);
+
+
+                updatedPrices.sort(
+                    (a, b) => new Date(a.date) - new Date(b.date)
+                );
+                const latestPrice =
+                    updatedPrices[updatedPrices.length - 1].price;
+
+                const updatedProduct = {
+                    ...updatedData,
+                    price: latestPrice,
+                    prices: updatedPrices,
+                };
+
+                const result = await productCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: updatedProduct }
+                );
+
+                res.send(result);
+            } catch (error) {
+                console.error("Update failed:", error);
+                res.status(500).send({ message: "Server error" });
+            }
         });
 
         app.delete("/products/:id", async (req, res) => {
@@ -330,7 +347,7 @@ async function run() {
         app.get("/users/:email", async (req, res) => {
             const email = req.params.email;
 
-            const filter = { email : email };
+            const filter = { email: email };
             const singleUser = await usersCollection.findOne(filter);
             res.send(singleUser);
         });
@@ -406,7 +423,6 @@ async function run() {
             }
         );
 
-
         /////////////////////// WATCHLIST related APIs ///////////////////////
         app.get("/watchlist", async (req, res) => {
             const watchlistItems = await watchlistCollection.find().toArray();
@@ -414,12 +430,14 @@ async function run() {
         });
 
         // user specific watchlist
-        app.get("/myWatchlist", async(req, res)=>{
-            try{
+        app.get("/myWatchlist", async (req, res) => {
+            try {
                 const userEmail = req.query.email;
 
-                if(!userEmail) {
-                    return res.status(400).send({message: "Email is required to query!"});
+                if (!userEmail) {
+                    return res
+                        .status(400)
+                        .send({ message: "Email is required to query!" });
                 }
 
                 const query = { email: userEmail };
@@ -427,30 +445,32 @@ async function run() {
                 const result = await watchlistCollection.find(query).toArray();
 
                 res.send(result);
+            } catch (error) {
+                console.log("Failed to fetch watchlist items: ", error);
+                res.status(500).send({ message: "Internal Server Error" });
             }
+        });
 
-            catch(error){
-                console.log('Failed to fetch watchlist items: ', error);
-                res.status(500).send({message: 'Internal Server Error'});
-            }
-        })
-
-        app.get("/watchlist/check", async(req, res)=>{
-            try{
-                const {email, productId} = req.query;
-                const isExist = await watchlistCollection.findOne({ email, productId});
-                res.send({ exist : !!isExist});
-            }   
-            catch(error){
+        app.get("/watchlist/check", async (req, res) => {
+            try {
+                const { email, productId } = req.query;
+                const isExist = await watchlistCollection.findOne({
+                    email,
+                    productId,
+                });
+                res.send({ exist: !!isExist });
+            } catch (error) {
                 console.log(error);
-                res.status(500).send({message: "Internal Server Error"});
+                res.status(500).send({ message: "Internal Server Error" });
             }
         });
 
         app.post("/watchlist", async (req, res) => {
             try {
                 const newWatchlistObj = req.body;
-                const result = await watchlistCollection.insertOne(newWatchlistObj);
+                const result = await watchlistCollection.insertOne(
+                    newWatchlistObj
+                );
                 res.send(result);
             } catch (error) {
                 console.log("Failed to save product to db : ", error);
@@ -458,72 +478,56 @@ async function run() {
             }
         });
 
-
-        app.delete("/watchlist/:id", async(req, res)=>{
+        app.delete("/watchlist/:id", async (req, res) => {
             const id = req.params.id;
 
-            try{
-                const result = await watchlistCollection.deleteOne({ _id: new ObjectId(id) });
+            try {
+                const result = await watchlistCollection.deleteOne({
+                    _id: new ObjectId(id),
+                });
 
-                if(result.deletedCount > 0) {
+                if (result.deletedCount > 0) {
                     // console.log(result);
                     res.send({ success: true, result: result });
+                } else {
+                    res.status(404).send({ message: "Item not found" });
                 }
-                else{
-                    res.status(404).send({message : "Item not found"});
-                }
-            }
-            catch(error){
-                res.status(500).send({message: "Internal Server Error!"});
+            } catch (error) {
+                res.status(500).send({ message: "Internal Server Error!" });
             }
         });
 
-
-
         //////////////////////// REVIEW related APIs //////////////////////////
-        app.get("/reviews/:productId", async(req, res)=>{
-            try{
+        app.get("/reviews/:productId", async (req, res) => {
+            try {
                 const productId = req.params.productId;
 
-                const reviews = await reviewCollection.find({ productId: productId }).sort({ date: -1 }).toArray();
+                const reviews = await reviewCollection
+                    .find({ productId: productId })
+                    .sort({ date: -1 })
+                    .toArray();
 
                 res.send(reviews);
+            } catch (error) {
+                res.status(500).send({
+                    message: "Failed to get reviews. ",
+                    error,
+                });
             }
-            catch(error){
-                res.status(500).send({ message: "Failed to get reviews. ", error});
-            }
-        })
-        
-        
-        app.post("/reviews", async (req, res)=>{
+        });
+
+        app.post("/reviews", async (req, res) => {
             try {
                 const newReviewObject = req.body;
-                const result = await reviewCollection.insertOne(newReviewObject);
+                const result = await reviewCollection.insertOne(
+                    newReviewObject
+                );
                 res.send(result);
             } catch (error) {
                 console.log("Failed to save review to db : ", error);
                 res.status(500).send({ message: "Internal server error" });
             }
         });
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
