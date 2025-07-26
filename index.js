@@ -53,6 +53,7 @@ async function run() {
         const paymentsCollection = db.collection("payments");
         const usersCollection = db.collection("users");
         const watchlistCollection = db.collection("watchlist");
+        const reviewCollection = db.collection("reviews");
 
         const verifyAdmin = async (req, res, next) => {
             const email = req.tokenEmail;
@@ -475,7 +476,54 @@ async function run() {
             catch(error){
                 res.status(500).send({message: "Internal Server Error!"});
             }
+        });
+
+
+
+        //////////////////////// REVIEW related APIs //////////////////////////
+        app.get("/reviews/:productId", async(req, res)=>{
+            try{
+                const productId = req.params.productId;
+
+                const reviews = await reviewCollection.find({ productId: productId }).sort({ date: -1 }).toArray();
+
+                res.send(reviews);
+            }
+            catch(error){
+                res.status(500).send({ message: "Failed to get reviews. ", error});
+            }
         })
+        
+        
+        app.post("/reviews", async (req, res)=>{
+            try {
+                const newReviewObject = req.body;
+                const result = await reviewCollection.insertOne(newReviewObject);
+                res.send(result);
+            } catch (error) {
+                console.log("Failed to save review to db : ", error);
+                res.status(500).send({ message: "Internal server error" });
+            }
+        });
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
