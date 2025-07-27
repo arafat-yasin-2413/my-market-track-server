@@ -54,6 +54,7 @@ async function run() {
         const usersCollection = db.collection("users");
         const watchlistCollection = db.collection("watchlist");
         const reviewCollection = db.collection("reviews");
+        const ordersCollection = db.collection("orders");
 
         const verifyAdmin = async (req, res, next) => {
             const email = req.tokenEmail;
@@ -128,11 +129,9 @@ async function run() {
                 const { startDate, endDate } = req.query;
 
                 if (!startDate || !endDate) {
-                    return res
-                        .status(400)
-                        .send({
-                            message: "Start date and End date are required",
-                        });
+                    return res.status(400).send({
+                        message: "Start date and End date are required",
+                    });
                 }
 
                 const allProduct = await productCollection.find().toArray();
@@ -211,27 +210,40 @@ async function run() {
 
                 const existingPrices = product.prices || [];
 
-                const newEntry = {
-                    date: updatedData.date,
-                    price: parseFloat(updatedData.price),
-                };
+                const inputDate = updatedData.date.split("T")[0]; // "YYYY-MM-DD"
+                const inputPrice = parseFloat(updatedData.price);
 
-                const updatedPrices = existingPrices.filter(
-                    (p) => p.date !== newEntry.date
+                // Step 1: Update or Insert this date-price pair in prices[]
+                const index = existingPrices.findIndex(
+                    (p) => p.date === inputDate
                 );
-                updatedPrices.push(newEntry);
+                if (index !== -1) {
+                    // update existing price
+                    existingPrices[index].price = inputPrice;
+                } else {
+                    // insert new price
+                    existingPrices.push({ date: inputDate, price: inputPrice });
+                }
 
+                // Step 2: Find the latest date's price for product.price
+                const latestEntry = existingPrices.reduce((latest, current) => {
+                    return new Date(current.date) > new Date(latest.date)
+                        ? current
+                        : latest;
+                }, existingPrices[0]);
 
-                updatedPrices.sort(
-                    (a, b) => new Date(a.date) - new Date(b.date)
-                );
-                const latestPrice =
-                    updatedPrices[updatedPrices.length - 1].price;
-
+                // Step 3: Build safe updated object (excluding _id)
                 const updatedProduct = {
-                    ...updatedData,
-                    price: latestPrice,
-                    prices: updatedPrices,
+                    name: updatedData.name,
+                    marketName: updatedData.marketName,
+                    marketDescription: updatedData.marketDescription,
+                    itemName: updatedData.itemName,
+                    itemDescription: updatedData.itemDescription,
+                    productImage: updatedData.productImage,
+                    status: updatedData.status,
+                    date: inputDate, // optional, last edited date
+                    price: latestEntry.price, // latest date-er price
+                    prices: existingPrices, // updated prices array
                 };
 
                 const result = await productCollection.updateOne(
@@ -452,22 +464,37 @@ async function run() {
         });
 
         app.get("/watchlist/check", async (req, res) => {
+            const { email, productId } = req.query;
+
             try {
-                const { email, productId } = req.query;
-                const isExist = await watchlistCollection.findOne({
-                    email,
-                    productId,
+                const exists = await watchlistCollection.findOne({
+                    email: email,
+                    "product._id": productId,
                 });
-                res.send({ exist: !!isExist });
+
+                res.send({ exist: !!exists });
             } catch (error) {
-                console.log(error);
-                res.status(500).send({ message: "Internal Server Error" });
+                console.error("Error checking watchlist:", error);
+                res.status(500).send({ message: "Server error" });
             }
         });
 
         app.post("/watchlist", async (req, res) => {
             try {
                 const newWatchlistObj = req.body;
+
+                // Check if product already exists in user's watchlist
+                const exists = await watchlistCollection.findOne({
+                    email: newWatchlistObj.email,
+                    "product._id": newWatchlistObj.product._id,
+                });
+
+                if (exists) {
+                    return res
+                        .status(400)
+                        .send({ message: "Product already in watchlist" });
+                }
+
                 const result = await watchlistCollection.insertOne(
                     newWatchlistObj
                 );
@@ -526,6 +553,36 @@ async function run() {
             } catch (error) {
                 console.log("Failed to save review to db : ", error);
                 res.status(500).send({ message: "Internal server error" });
+            }
+        });
+
+        //////////////////// ORDER related APIs ///////////////////
+        // app.get("/orders/:userEmail", async (req, res) => {
+        //     try {
+        //         const userEmail = req.params.userEmail;
+
+        //         const orderList = await ordersCollection
+        //             .find({ productId: productId })
+        //             .sort({ date: -1 })
+        //             .toArray();
+
+        //         res.send(reviews);
+        //     } catch (error) {
+        //         res.status(500).send({
+        //             message: "Failed to get reviews. ",
+        //             error,
+        //         });
+        //     }
+        // });
+
+        app.post("/orders", async (req, res) => {
+            try {
+                const orderData = req.body;
+                const result = await ordersCollection.insertOne(orderData);
+                res.send(result);
+            } catch (error) {
+                console.log("Failed to save order to DB!");
+                res.status(500).send({ message: "Internal Server Error" });
             }
         });
 
