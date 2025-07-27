@@ -557,23 +557,20 @@ async function run() {
         });
 
         //////////////////// ORDER related APIs ///////////////////
-        // app.get("/orders/:userEmail", async (req, res) => {
-        //     try {
-        //         const userEmail = req.params.userEmail;
-
-        //         const orderList = await ordersCollection
-        //             .find({ productId: productId })
-        //             .sort({ date: -1 })
-        //             .toArray();
-
-        //         res.send(reviews);
-        //     } catch (error) {
-        //         res.status(500).send({
-        //             message: "Failed to get reviews. ",
-        //             error,
-        //         });
-        //     }
-        // });
+        // get orders by email
+        app.get("/orders", async(req, res)=>{
+            try{
+                const userEmail = req.query.email;
+                if(!userEmail) {
+                    return res.status(400).send({message: "Email is required!"});
+                }
+                const myOrders = await ordersCollection.find({ userEmail }).toArray();
+                res.send(myOrders);
+            }
+            catch(error){
+                res.status(500).send({message: "Internal Server Error!"})
+            }
+        });
 
         app.post("/orders", async (req, res) => {
             try {
