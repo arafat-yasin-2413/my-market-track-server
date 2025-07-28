@@ -55,6 +55,7 @@ async function run() {
         const watchlistCollection = db.collection("watchlist");
         const reviewCollection = db.collection("reviews");
         const ordersCollection = db.collection("orders");
+        const advCollection = db.collection("advertisements");
 
         const verifyAdmin = async (req, res, next) => {
             const email = req.tokenEmail;
@@ -558,17 +559,20 @@ async function run() {
 
         //////////////////// ORDER related APIs ///////////////////
         // get orders by email
-        app.get("/orders", async(req, res)=>{
-            try{
+        app.get("/orders", async (req, res) => {
+            try {
                 const userEmail = req.query.email;
-                if(!userEmail) {
-                    return res.status(400).send({message: "Email is required!"});
+                if (!userEmail) {
+                    return res
+                        .status(400)
+                        .send({ message: "Email is required!" });
                 }
-                const myOrders = await ordersCollection.find({ userEmail }).toArray();
+                const myOrders = await ordersCollection
+                    .find({ userEmail })
+                    .toArray();
                 res.send(myOrders);
-            }
-            catch(error){
-                res.status(500).send({message: "Internal Server Error!"})
+            } catch (error) {
+                res.status(500).send({ message: "Internal Server Error!" });
             }
         });
 
@@ -580,6 +584,54 @@ async function run() {
             } catch (error) {
                 console.log("Failed to save order to DB!");
                 res.status(500).send({ message: "Internal Server Error" });
+            }
+        });
+
+        ///////////////// ADVERTISEMENT related APIs ///////////////////
+        // getting ads by email
+        app.get("/myAds", async (req, res) => {
+            try {
+                const email = req.query.email;
+                const myAds = await advCollection.find({ email }).toArray();
+                res.send(myAds);
+            } catch (error) {
+                res.status(500).send({
+                    message: "Failed to get Advertisements!",
+                });
+            }
+        });
+
+        app.post("/addAdvertisement", async (req, res) => {
+            const newAd = req.body;
+            const result = await advCollection.insertOne(newAd);
+            res.send(result);
+        });
+
+        app.put("/myAds/update/:id", async (req, res) => {
+            try {
+                const id = req.params.id;
+                const updatedData = req.body;
+
+                const result = await advCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: updatedData }
+                );
+                res.send(result);
+            } catch (error) {
+                console.error("Update Error:", error);
+                res.status(500).send({ message: "Internal Server Error!" });
+            }
+        });
+
+        app.delete("/myAds/delete/:id", async (req, res) => {
+            try {
+                const id = req.params.id;
+                const result = await advCollection.deleteOne({
+                    _id: new ObjectId(id),
+                });
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: "Internal Server Error!" });
             }
         });
 
