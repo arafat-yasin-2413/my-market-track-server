@@ -150,7 +150,9 @@ async function run() {
                     });
                 }
 
-                const allProduct = await productCollection.find({ status: "approved" }).toArray();
+                const allProduct = await productCollection
+                    .find({ status: "approved" })
+                    .toArray();
 
                 const filteredProducts = allProduct.filter((singleProduct) => {
                     if (!Array.isArray(singleProduct.prices)) return false;
@@ -598,6 +600,17 @@ async function run() {
         });
 
         //////////////////// ORDER related APIs ///////////////////
+        app.get("/allOrders", async (req, res) => {
+            try {
+                const allOrders = await ordersCollection.find().toArray();
+                res.send(allOrders);
+            } catch (error) {
+                res.status(500).send({ message: "Failed to fetch ads" });
+            }
+        });
+
+
+
         // get orders by email
         app.get("/orders", async (req, res) => {
             try {
@@ -628,6 +641,15 @@ async function run() {
         });
 
         ///////////////// ADVERTISEMENT related APIs ///////////////////
+        app.get("/allAds", async (req, res) => {
+            try {
+                const allAds = await advCollection.find().toArray();
+                res.send(allAds);
+            } catch (error) {
+                res.status(500).send({ message: "Failed to fetch ads" });
+            }
+        });
+
         // getting ads by email
         app.get("/myAds", async (req, res) => {
             try {
@@ -663,7 +685,20 @@ async function run() {
             }
         });
 
-        app.delete("/myAds/delete/:id", async (req, res) => {
+        app.patch("/ads/status/:id", async (req, res) => {
+            try {
+                const id = req.params.id;
+                const updated = await advCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: { status: req.body.status || "approved" } }
+                );
+                res.send(updated);
+            } catch (err) {
+                res.status(500).send({ message: "Server error" });
+            }
+        });
+
+        app.delete("/ads/delete/:id", async (req, res) => {
             try {
                 const id = req.params.id;
                 const result = await advCollection.deleteOne({
