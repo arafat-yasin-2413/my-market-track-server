@@ -398,6 +398,20 @@ async function run() {
             res.send(allUser);
         });
 
+        // searching user
+        app.get("/users/search", async (req, res) => {
+            const query = req.query.query?.toLowerCase();
+            const result = await usersCollection
+                .find({
+                    $or: [
+                        { email: { $regex: query, $options: "i" } },
+                        { name: { $regex: query, $options: "i" } },
+                    ],
+                })
+                .toArray();
+            res.send(result);
+        });
+
         // specific user
         app.get("/users/:email", async (req, res) => {
             const email = req.params.email;
@@ -609,8 +623,6 @@ async function run() {
             }
         });
 
-
-
         // get orders by email
         app.get("/orders", async (req, res) => {
             try {
@@ -650,7 +662,22 @@ async function run() {
             }
         });
 
-        // getting ads by email
+        // getting approved ads only
+        app.get("/approvedAds", async (req, res) => {
+            try {
+                const approvedAds = await advCollection
+                    .find({ status: "approved" })
+                    .toArray();
+                res.send(approvedAds);
+            } catch (error) {
+                console.error("Error fetching approved ads:", error);
+                res.status(500).send({
+                    message: "Failed to fetch approved ads",
+                });
+            }
+        });
+
+        // getting all ads by email
         app.get("/myAds", async (req, res) => {
             try {
                 const email = req.query.email;
