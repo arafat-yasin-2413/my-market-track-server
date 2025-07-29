@@ -106,6 +106,39 @@ async function run() {
             }
         });
 
+        app.get("/distinctProducts", async (req, res) => {
+            try {
+            
+                const products = await productCollection
+                    .aggregate([
+                        {
+                            $match: { status: "approved" },
+                        },
+                        {
+                            $group: {
+                                _id: "$marketName",
+                                product: { $first: "$$ROOT" },
+                            },
+                        },
+                        {
+                            $replaceRoot: { newRoot: "$product" },
+                        },
+                        {
+                            $limit: 6,
+                        },
+                    ])
+                    .toArray();
+
+                res.json(products);
+            } catch (err) {
+                console.error("Error in API:", err);
+                res.status(500).json({
+                    message: "Server Error",
+                    error: err.message,
+                });
+            }
+        });
+
         // specific product
         app.get("/products/:id", async (req, res) => {
             const id = req.params.id;
