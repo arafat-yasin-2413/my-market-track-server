@@ -91,6 +91,21 @@ async function run() {
             res.send(products);
         });
 
+        // approved products
+        app.get("/approvedProducts", async (req, res) => {
+            try {
+                const approvedProducts = await productCollection
+                    .find({ status: "approved" })
+                    .toArray();
+                res.send(approvedProducts);
+            } catch (error) {
+                console.error("Error fetching approved products:", error);
+                res.status(500).send({
+                    message: "Server error while fetching approved products",
+                });
+            }
+        });
+
         // specific product
         app.get("/products/:id", async (req, res) => {
             const id = req.params.id;
@@ -104,7 +119,7 @@ async function run() {
         app.get("/products/sort/low", async (req, res) => {
             try {
                 const products = await productCollection
-                    .find()
+                    .find({ status: "approved" })
                     .sort({ price: 1 })
                     .toArray();
                 res.send(products);
@@ -116,7 +131,7 @@ async function run() {
         app.get("/products/sort/high", async (req, res) => {
             try {
                 const products = await productCollection
-                    .find()
+                    .find({ status: "approved" })
                     .sort({ price: -1 })
                     .toArray();
                 res.send(products);
@@ -135,7 +150,7 @@ async function run() {
                     });
                 }
 
-                const allProduct = await productCollection.find().toArray();
+                const allProduct = await productCollection.find({ status: "approved" }).toArray();
 
                 const filteredProducts = allProduct.filter((singleProduct) => {
                     if (!Array.isArray(singleProduct.prices)) return false;
@@ -257,6 +272,31 @@ async function run() {
                 console.error("Update failed:", error);
                 res.status(500).send({ message: "Server error" });
             }
+        });
+
+        app.patch("/products/approve/:id", async (req, res) => {
+            const id = req.params.id;
+            const result = await productCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: { status: "approved" } }
+            );
+            res.send(result);
+        });
+
+        app.put("/products/reject/:id", async (req, res) => {
+            const id = req.params.id;
+            const { rejectionReason, adminFeedback } = req.body;
+            const result = await productCollection.updateOne(
+                { _id: new ObjectId(id) },
+                {
+                    $set: {
+                        status: "rejected",
+                        rejectionReasons: rejectionReason,
+                        adminFeedback,
+                    },
+                }
+            );
+            res.send(result);
         });
 
         app.delete("/products/:id", async (req, res) => {
