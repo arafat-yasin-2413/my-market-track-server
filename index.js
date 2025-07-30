@@ -35,7 +35,7 @@ const verifyJWT = (req, res, next) => {
 
     jwt.verify(token, process.env.JWT_SECRET_KEY, (error, decoded) => {
         if (error) {
-            console.log(error);
+            // console.log(error);
             return res.status(401).send({ message: "Unauthorized Access!!!" });
         }
         req.tokenEmail = decoded.email;
@@ -46,7 +46,7 @@ const verifyJWT = (req, res, next) => {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
         const db = client.db("marketTrackDB");
         const productCollection = db.collection("products");
@@ -99,7 +99,7 @@ async function run() {
                     .toArray();
                 res.send(approvedProducts);
             } catch (error) {
-                console.error("Error fetching approved products:", error);
+                // console.error("Error fetching approved products:", error);
                 res.status(500).send({
                     message: "Server error while fetching approved products",
                 });
@@ -131,7 +131,7 @@ async function run() {
 
                 res.json(products);
             } catch (err) {
-                console.error("Error in API:", err);
+                // console.error("Error in API:", err);
                 res.status(500).json({
                     message: "Server Error",
                     error: err.message,
@@ -198,7 +198,7 @@ async function run() {
 
                 res.send(filteredProducts);
             } catch (error) {
-                console.log("Error in products sorting dateby: ", error);
+                // console.log("Error in products sorting dateby: ", error);
                 res.status(500).send({ message: "Server Error" });
             }
         });
@@ -228,7 +228,7 @@ async function run() {
                     .toArray();
                 res.send(myProducts);
             } catch (error) {
-                console.error("Error fetching products : ", error);
+                // console.error("Error fetching products : ", error);
                 res.status(500).send({ message: "Failed to get products" });
             }
         });
@@ -239,7 +239,7 @@ async function run() {
                 const result = await productCollection.insertOne(newProduct);
                 res.send(result);
             } catch (error) {
-                console.log("Failed to save product to db : ", error);
+                // console.log("Failed to save product to db : ", error);
                 res.status(500).send({ message: "Internal server error" });
             }
         });
@@ -304,7 +304,7 @@ async function run() {
 
                 res.send(result);
             } catch (error) {
-                console.error("Update failed:", error);
+                // console.error("Update failed:", error);
                 res.status(500).send({ message: "Server error" });
             }
         });
@@ -373,7 +373,7 @@ async function run() {
                     .toArray();
                 res.send(payments);
             } catch (error) {
-                console.error("Error fetching payment history: ", error);
+                // console.error("Error fetching payment history: ", error);
                 res.status(500).send({ message: "Failed to get payments." });
             }
         });
@@ -420,7 +420,7 @@ async function run() {
                     insertedId: paymentResult.insertedId,
                 });
             } catch (error) {
-                console.error("Payment processing failed : ", error);
+                // console.error("Payment processing failed : ", error);
             }
         });
 
@@ -468,7 +468,7 @@ async function run() {
 
                 res.send({ role: user.role });
             } catch (error) {
-                console.log("Error fetching role: ", error);
+                // console.log("Error fetching role: ", error);
                 res.status(500).send({
                     role: null,
                     error: "Internal Server Error",
@@ -516,7 +516,7 @@ async function run() {
                         });
                     }
                 } catch (error) {
-                    console.error("Update error:", error);
+                    // console.error("Update error:", error);
                     res.status(500).send({
                         success: false,
                         message: "Failed to update role",
@@ -548,7 +548,7 @@ async function run() {
 
                 res.send(result);
             } catch (error) {
-                console.log("Failed to fetch watchlist items: ", error);
+                // console.log("Failed to fetch watchlist items: ", error);
                 res.status(500).send({ message: "Internal Server Error" });
             }
         });
@@ -564,7 +564,7 @@ async function run() {
 
                 res.send({ exist: !!exists });
             } catch (error) {
-                console.error("Error checking watchlist:", error);
+                // console.error("Error checking watchlist:", error);
                 res.status(500).send({ message: "Server error" });
             }
         });
@@ -590,7 +590,7 @@ async function run() {
                 );
                 res.send(result);
             } catch (error) {
-                console.log("Failed to save product to db : ", error);
+                // console.log("Failed to save product to db : ", error);
                 res.status(500).send({ message: "Internal server error" });
             }
         });
@@ -641,7 +641,7 @@ async function run() {
                 );
                 res.send(result);
             } catch (error) {
-                console.log("Failed to save review to db : ", error);
+                // console.log("Failed to save review to db : ", error);
                 res.status(500).send({ message: "Internal server error" });
             }
         });
@@ -680,7 +680,7 @@ async function run() {
                 const result = await ordersCollection.insertOne(orderData);
                 res.send(result);
             } catch (error) {
-                console.log("Failed to save order to DB!");
+                // console.log("Failed to save order to DB!");
                 res.status(500).send({ message: "Internal Server Error" });
             }
         });
@@ -703,7 +703,7 @@ async function run() {
                     .toArray();
                 res.send(approvedAds);
             } catch (error) {
-                console.error("Error fetching approved ads:", error);
+                // console.error("Error fetching approved ads:", error);
                 res.status(500).send({
                     message: "Failed to fetch approved ads",
                 });
@@ -740,7 +740,7 @@ async function run() {
                 );
                 res.send(result);
             } catch (error) {
-                console.error("Update Error:", error);
+                // console.error("Update Error:", error);
                 res.status(500).send({ message: "Internal Server Error!" });
             }
         });
@@ -771,10 +771,10 @@ async function run() {
         });
 
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log(
-            "Pinged your deployment. You successfully connected to MongoDB!"
-        );
+        // await client.db("admin").command({ ping: 1 });
+        // console.log(
+        //     "Pinged your deployment. You successfully connected to MongoDB!"
+        // );
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
