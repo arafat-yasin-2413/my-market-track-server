@@ -211,7 +211,6 @@ async function run() {
 
                 // console.log('decoded email ----> ', decodedEmail);
                 // console.log('query email -------> ', vendorEmail);
-
                 if (decodedEmail !== vendorEmail) {
                     return res
                         .status(403)
