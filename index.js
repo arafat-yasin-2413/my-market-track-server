@@ -349,7 +349,7 @@ async function run() {
         });
 
         ////////////////////// PAYMENT related APIs ////////////////////////
-        // get payment history for specific user and all payment history for admin
+        // get payment history for specific user and all payment history for Admin
         app.get("/payments", verifyJWT, async (req, res) => {
             try {
                 const userEmail = req.query.email;
