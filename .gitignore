@@ -11,3 +11,5 @@ config.bat
 .envrc
 .venv/
 venv/
+
+.env*
