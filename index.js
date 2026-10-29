@@ -8,7 +8,7 @@ const stripe = require("stripe")(process.env.PAYMENT_GATEWAY_KEY);
 
 const app = express();
 const port = process.env.PORT || 3000;
-
+// check database first
 // middleware
 app.use(cors());
 app.use(express.json());
